@@ -1,34 +1,52 @@
 const MODULE_ID = "pf2e-kineticist-auras";
 
-/**
- * Register module settings (runs on Foundry init).
- * We add a world-scoped checkbox: "Enable debug logging".
- */
-Hooks.on("init", () => {
+/* -------------------------------------------- */
+/* Settings                                     */
+/* -------------------------------------------- */
+
+function registerSettings() {
+  // Visible in Configure Settings -> World (v13)
   game.settings.register(MODULE_ID, "debugLogging", {
     name: "Enable debug logging",
-    hint: "If enabled, PF2e Kineticist Auras will log its internal actions (aura detection, effect creation/removal) to the browser console for debugging.",
-    scope: "world",        // world-level so the GM controls it
-    config: true,          // show in the module settings UI
+    hint: "If enabled, PF2e Kineticist Auras will log internal actions (aura detection, effect creation/removal) to the browser console for debugging.",
+    scope: "world",
+    config: true,
     type: Boolean,
     default: false
   });
+}
+
+Hooks.once("init", () => {
+  console.log(`[${MODULE_ID}] init OK - registering settings`);
+  registerSettings();
 });
 
 /**
- * Convenience: only log if debugLogging is enabled.
+ * Helper to read the debug flag without crashing if something weird happens.
  */
-function debugLog(...args) {
-  const enabled = game.settings.get(MODULE_ID, "debugLogging");
-  if (!enabled) return;
-  console.log(`[${MODULE_ID}]`, ...args);
+function isDebugEnabled() {
+  try {
+    return game.settings.get(MODULE_ID, "debugLogging");
+  } catch (err) {
+    // happens if called super early or setting missing
+    return false;
+  }
 }
 
 /**
- * Fired whenever an ActiveEffect is created on any actor.
- * We care when PF2e applies kinetic aura from Channel Elements.
+ * Conditional console.log
  */
+function debugLog(...args) {
+  if (!isDebugEnabled()) return;
+  console.log(`[${MODULE_ID}]`, ...args);
+}
+
+/* -------------------------------------------- */
+/* Core Hooks: create/delete ActiveEffect       */
+/* -------------------------------------------- */
+
 Hooks.on("createActiveEffect", async (effect, options, userId) => {
+  // Only let the active GM handle this to avoid duplicate spam
   if (!game.user.isGM) return;
 
   const actor = effect.parent;
@@ -37,38 +55,34 @@ Hooks.on("createActiveEffect", async (effect, options, userId) => {
   const newName = (effect.name ?? "").toLowerCase();
   if (!newName.includes("kinetic aura")) return;
 
-  debugLog("Detected new kinetic aura effect on actor", actor.name, {
+  debugLog("createActiveEffect detected kinetic aura on actor", actor.name, {
     effectName: effect.name,
     effectId: effect.id
   });
 
-  // 1. What elements can this kineticist channel?
+  // Get all gates the actor can channel (Air, Fire, etc.)
   const elements = getActorGates(actor);
-  debugLog("Resolved actor gates", elements);
+  debugLog("Detected gates for actor", actor.name, elements);
 
   if (!elements.length) {
-    debugLog("No gates found for actor; skipping aura tag creation.");
+    debugLog("No gates found; skipping aura tag creation.");
     return;
   }
 
-  // 2. Clean up old module aura tags so we can recreate the fresh correct set.
+  // Clean up old aura tags we created
   await cleanupModuleAuras(actor);
 
-  // 3. Create new aura tag effects for Automated Animations.
+  // Build new aura tag effects and create them
   const newEffectsData = elements.map(el => makeElementAuraEffect(el));
-  debugLog("Creating module aura tag effects", newEffectsData);
+  debugLog("Creating aura tag effects", newEffectsData);
 
   if (newEffectsData.length > 0) {
     await actor.createEmbeddedDocuments("Item", newEffectsData);
-    debugLog("Created aura tag effects on actor", actor.name);
+    debugLog("Aura tag effects created on actor", actor.name);
   }
 });
 
-/**
- * Fired whenever an ActiveEffect is deleted from an actor.
- * We care if (and only if) it's one of the PF2e kinetic aura effects.
- * We remove our aura VFX tags only if *all* PF2e aura copies are now gone.
- */
+
 Hooks.on("deleteActiveEffect", async (effect, options, userId) => {
   if (!game.user.isGM) return;
 
@@ -78,34 +92,38 @@ Hooks.on("deleteActiveEffect", async (effect, options, userId) => {
   const oldName = (effect.name ?? "").toLowerCase();
   if (!oldName.includes("kinetic aura")) return;
 
-  debugLog("Kinetic aura effect removed from actor", actor.name, {
+  debugLog("deleteActiveEffect saw kinetic aura removed from actor", actor.name, {
     effectName: effect.name,
     effectId: effect.id
   });
 
-  // Check if any kinetic aura effects are still active.
+  // PF2e can apply multiple "kinetic aura" effects (one per gate).
+  // We only turn off visuals if ALL of them are gone.
   const stillHasKineticAura = actor.effects.some(eff =>
     (eff.name ?? "").toLowerCase().includes("kinetic aura")
   );
 
-  debugLog("Does actor still have any kinetic aura effects?", stillHasKineticAura);
+  debugLog("Actor still has any PF2e kinetic aura?", stillHasKineticAura);
 
   if (stillHasKineticAura) {
-    debugLog("At least one kinetic aura remains; keeping module aura tags in place.");
+    debugLog("At least one aura remains; leaving our VFX tags in place.");
     return;
   }
 
-  // All PF2e kinetic aura effects are gone.
-  debugLog("No kinetic aura effects remain; cleaning up module aura tags.");
+  debugLog("No kinetic aura effects remain; cleaning up our VFX aura tags.");
   await cleanupModuleAuras(actor);
 });
 
+/* -------------------------------------------- */
+/* Gate detection                               */
+/* -------------------------------------------- */
+
 /**
- * Returns an array of element names this kineticist can channel.
- * Example: ["Fire", "Metal"]
+ * Find which elemental gates the actor has access to.
+ * Returns e.g. ["Fire", "Metal"].
  *
- * We scan the actor's feats / class features for gate names.
- * Tune the regexes here to match how your PF2e world names / describes gates.
+ * This scans feats/class features. You can tighten the regex patterns
+ * once you see the exact Gate item names in your world.
  */
 function getActorGates(actor) {
   const GATE_MAP = {
@@ -120,6 +138,7 @@ function getActorGates(actor) {
   const found = new Set();
 
   for (const item of actor.items) {
+    // kineticist gates should appear as feats or class features
     if (!["feat", "classfeature"].includes(item.type)) continue;
 
     const itemName = item.name ?? "";
@@ -133,33 +152,34 @@ function getActorGates(actor) {
   }
 
   const gates = Array.from(found);
-  debugLog("getActorGates() for actor", actor.name, "=>", gates);
+  debugLog("getActorGates()", actor.name, "->", gates);
   return gates;
 }
 
+/* -------------------------------------------- */
+/* VFX tag creation & cleanup                   */
+/* -------------------------------------------- */
+
 /**
- * Build a lightweight Active Effect for one element.
- * These are cosmetic "tags" for Automated Animations, not mechanical buffs.
- *
- * The name matters:
- *   "Kinetic Aura: Fire"
- *   "Kinetic Aura: Metal"
- *   etc.
+ * Build one of our cosmetic aura tag effects.
+ * These are named "Kinetic Aura: <Element>" and are meant to be
+ * watched by Automated Animations for persistent auras.
  */
 function makeElementAuraEffect(elementType) {
   const auraName = `Kinetic Aura: ${elementType}`;
+
   const effectData = {
     name: auraName,
     type: "effect",
     img: pickIconForElement(elementType),
     system: {
-      tokenIcon: { show: true },
+      tokenIcon: { show: true }, // makes it visible on the token HUD
       duration: {
         unit: "unlimited",
         value: null,
         sustained: false
       },
-      rules: []
+      rules: [] // no mechanical bonuses, just a tag
     },
     flags: {
       [MODULE_ID]: {
@@ -173,8 +193,9 @@ function makeElementAuraEffect(elementType) {
   return effectData;
 }
 
+
 /**
- * Remove all aura tag effects that *we* previously created,
+ * Remove all aura tag effects created by this module,
  * leaving PF2e's own kinetic aura effects untouched.
  */
 async function cleanupModuleAuras(actor) {
@@ -182,7 +203,7 @@ async function cleanupModuleAuras(actor) {
     eff => eff.flags?.[MODULE_ID]?.generatedByKineticAura === true
   );
 
-  debugLog("cleanupModuleAuras() found", ours.length, "effects to remove", ours.map(e => e.name));
+  debugLog("cleanupModuleAuras() found", ours.length, "effects:", ours.map(e => e.name));
 
   if (!ours.length) return;
 
@@ -192,10 +213,10 @@ async function cleanupModuleAuras(actor) {
   debugLog("cleanupModuleAuras() removed aura tag effects from actor", actor.name);
 }
 
-/**
- * Pick an icon for the cosmetic aura tag.
- * You can change these to any asset paths you like.
- */
+/* -------------------------------------------- */
+/* Icon helper                                  */
+/* -------------------------------------------- */
+
 function pickIconForElement(elementType) {
   switch (String(elementType).toLowerCase()) {
     case "air":
