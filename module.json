@@ -1,0 +1,48 @@
+{
+  "id": "pf2e-kineticist-auras",
+  "title": "PF2e Kineticist Auras",
+  "description": "Automatically creates and removes elemental aura tag effects (Air, Earth, Fire, Metal, Water, Wood) for PF2e kineticists when Channel Elements is used. Intended to drive Automated Animations persistent aura VFX.",
+  "version": "1.0.0",
+  "authors": [
+    {
+      "name": "Dwank-P",
+      "url": "https://github.com/Dwank-P/pf2e-kineticist-auras"
+    }
+  ],
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf2e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "5.0.0"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "id": "autoanimations",
+        "type": "module",
+        "compatibility": {
+          "minimum": "4.0.0"
+        }
+      }
+    ]
+  },
+  "scripts": [
+    "scripts/module.js"
+  ],
+  "esmodules": [],
+  "styles": [],
+  "packs": [],
+  "languages": [],
+  "socket": false,
+  "url": "https://github.com/Dwank-P/pf2e-kineticist-auras",
+  "manifest": "https://raw.githubusercontent.com/Dwank-P/pf2e-kineticist-auras/main/module.json",
+  "download": "https://github.com/Dwank-P/pf2e-kineticist-auras/archive/refs/heads/main.zip",
+  "license": "MIT"
+}
