@@ -1,4 +1,4 @@
-# PF2e Kineticist Auras
+# PF2e Kineticist Auras - Still under development
 
 Foundry VTT module for Pathfinder 2e (PF2e system), targeting Foundry VTT V13.
 
@@ -59,3 +59,4 @@ When the kinetic aura ends (all copies of PF2e's `Effect: Kinetic Aura` are remo
 ## License
 
 MIT
+
