@@ -278,17 +278,17 @@ async function cleanupModuleAuras(actor) {
 function pickIconForElement(elementType) {
   switch (String(elementType).toLowerCase()) {
     case "air":
-      return "icons/magic/air/wind-vortex-swirl.webp";
+      return "icons/magic/air/wind-vortex-swirl-blue-purple.webp";
     case "earth":
-      return "icons/magic/earth/strike-fist-stone.webp";
+      return "icons/magic/earth/barrier-stone-brown-green.webp";
     case "fire":
-      return "icons/magic/fire/flame-burning-hand.webp";
+      return "icons/magic/fire/beam-jet-stream-spiral-yellow.webp";
     case "metal":
-      return "icons/weapons/swords/sword-steel-broad.webp";
+      return "icons/commodities/metal/mail-chain-steel.webp";
     case "water":
-      return "icons/magic/water/wave-water-blue.webp";
+      return "icons/magic/water/pseudopod-swirl-blue.webp";
     case "wood":
-      return "icons/magic/nature/root-vine-entangle.webp";
+      return "icons/magic/nature/root-vine-barrier-wall-brown.webp";
     default:
       return "icons/magic/elemental/elemental-generic.webp";
   }
