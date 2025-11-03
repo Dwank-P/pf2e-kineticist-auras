@@ -16,7 +16,7 @@ When a kineticist uses **Channel Elements** and creates their kinetic aura, this
 
 ## Why this exists
 
-PF2e's kineticist can have multiple gates. By rules, Channel Elements can manifest *all* of your kinetic elements at once in a swirling aura.
+This allows for animations for each of a kineticist's kinetic gates and allows multiple kineticists to have different auras.
 
 This module:
 - Detects which gates the actor actually has (Air / Earth / Fire / Metal / Water / Wood).
@@ -28,7 +28,7 @@ This module:
 
 1. Install this module into your Foundry data folder under:
    `Data/modules/pf2e-kineticist-auras`
-   or install via the manifest URL in `module.json`.
+   or install via the manifest URL: https://raw.githubusercontent.com/Dwank-P/pf2e-kineticist-auras/main/module.json
 
 2. Enable **PF2e Kineticist Auras** in *Manage Modules* for your world.
 
@@ -48,7 +48,6 @@ When the kinetic aura ends (all copies of PF2e's `Effect: Kinetic Aura` are remo
 
 - This module does not add any mechanical bonuses or rules. The effects it creates are cosmetic tags only.
 - We intentionally do **not** delete PF2e's own `Effect: Kinetic Aura` effects. We only mirror them and watch for them to disappear.
-- PF2e sometimes applies multiple kinetic aura effects (one per gate) and clears them one at a time. The module only clears visuals when *all* such effects are gone.
 
 ## Foundry / System Requirements
 
@@ -59,4 +58,5 @@ When the kinetic aura ends (all copies of PF2e's `Effect: Kinetic Aura` are remo
 ## License
 
 MIT
+
 
